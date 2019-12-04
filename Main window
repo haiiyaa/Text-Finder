@@ -1,0 +1,1228 @@
+
+
+unit frmMain;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.FileCtrl, Vcl.StdCtrls, AdvMemo, AdvmPS,
+  Vcl.ExtCtrls, Vcl.Imaging.pngimage, AdvPanel, editForm, INIFiles, System.IOUtils,
+  FolderDialog, System.Generics.Collections;
+
+type
+  TFormMain = class(TForm)
+    Button1: TButton;
+    AdvMemo1: TAdvMemo;
+    OpenDialog1: TOpenDialog;
+    AdvPascalMemoStyler1: TAdvPascalMemoStyler;
+    Memo2: TMemo;
+    AdvMemo2: TAdvMemo;
+    upBtn: TImage;
+    downBtn: TImage;
+    Button3: TButton;
+    Button4: TButton;
+    SaveDialog1: TSaveDialog;
+    upBtn2: TImage;
+    downBtn2: TImage;
+    AdvMemo3: TAdvMemo;
+    Button6: TButton;
+    Label1: TLabel;
+    Label2: TLabel;
+    Label3: TLabel;
+    Shape1: TShape;
+    Shape2: TShape;
+    Shape3: TShape;
+    Shape4: TShape;
+    Shape5: TShape;
+    AdvPanel1: TAdvPanel;
+    AdvPanel2: TAdvPanel;
+    Splitter2: TSplitter;
+    AdvPanel3: TAdvPanel;
+    AdvPanel4: TAdvPanel;
+    Splitter3: TSplitter;
+    Splitter1: TSplitter;
+    EditLine: TButton;
+    AdvMemo4: TAdvMemo;
+    CheckBox1: TCheckBox;
+    folderButton: TButton;
+    FolderDialog1: TFolderDialog;
+    Label4: TLabel;
+    FindDialog1: TFindDialog;
+    procedure Button1Click(Sender: TObject);
+    procedure downBtnClick(Sender: TObject);
+    procedure upBtnClick(Sender: TObject);
+    procedure Button3Click(Sender: TObject);
+    procedure Button4Click(Sender: TObject);
+    //procedure Button5Click(Sender: TObject);
+    procedure upBtn2Click(Sender: TObject);
+    procedure downBtn2Click(Sender: TObject);
+    procedure Button6Click(Sender: TObject);
+    //procedure FormCreate(Sender: TObject);
+    //procedure Button7Click(Sender: TObject);
+    procedure UpDateMemo3();
+    //procedure createBackup();
+    procedure AdvMemo2ActiveLineChange(CurYPos: Integer);
+    procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+    procedure FormCreate(Sender: TObject);
+    procedure AdvMemo1ActiveLineChange(CurYPos: Integer);
+    procedure UpdateMemo2;
+    procedure EditLineClick(Sender: TObject);
+    //procedure FilehasBeenEdited(AHasBeenEdited: integer);
+    procedure rollback();
+    procedure folderButtonClick(Sender: TObject);
+    procedure CheckBox1Click(Sender: TObject);
+    procedure AdvMemo1DblClick(Sender: TObject);
+    procedure AdvMemo4DblClick(Sender: TObject);
+    procedure createBackup();
+    procedure AdvMemo2KeyDown(Sender: TObject; var Key: Word;
+      Shift: TShiftState);
+    procedure AdvMemo2KeyUp(Sender: TObject; var Key: Word; Shift: TShiftState);
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
+    procedure GetLinesCount();
+  private
+    { Private declarations }
+    LselectedFile: string;
+    FCounter: integer;
+    FLastDestination: string;
+    HasBeenEdited: integer;
+    directoryList: TStringlist;
+    WantToSave: bool;
+    Backup: TStringList;
+    procedure RecursiveFolderTraversing(folderPath: string);
+
+  public
+    { Public declarations }
+  end;
+
+var
+  FormMain: TFormMain;
+  //Form1 : Tform1;
+  rollbackText : string;
+  rollbackline : integer;
+  rollbacklinememo1: integer;
+  startpos: TIntList;
+  endpos: TIntList;
+  finishedStrings : TintList;
+  stringSet : array of boolean;
+  iniFile : TINIFILE;
+  
+  lastStartpos :integer;
+  multi :integer;
+  linePositions : TList<integer>;
+
+implementation
+
+uses
+  System.AnsiStrings;
+
+{$R *.dfm}
+
+//------------------------------------ENTIRE LINE------------------------------
+
+
+procedure TFormMain.AdvMemo1ActiveLineChange(CurYPos: Integer);
+begin
+  try
+    AdvMemo2.ActiveLine := AdvMemo2.Lines.IndexOf(AdvMemo1.Lines.Strings[AdvMemo1.ActiveLine]);
+    UpDateMemo3();
+    AdvMemo1.ActiveLine := AdvMemo1.Lines.IndexOf(AdvMemo2.Lines.Strings[AdvMemo2.ActiveLine]);
+  except on E: Exception do
+    AdvMemo2.ActiveLine := AdvMemo2.Lines.IndexOf(AdvMemo1.Lines.Strings[AdvMemo1.ActiveLine]);
+  end;
+
+
+end;
+
+procedure TFormMain.Rollback();
+begin
+  rollbacktext := AdvMemo2.Lines.Strings[AdvMemo2.ActiveLine];
+  rollbackline := AdvMemo2.ActiveLine;
+  rollbacklinememo1 := AdvMemo1.ActiveLine;
+end;
+
+procedure TFormMain.AdvMemo1DblClick(Sender: TObject);
+begin
+  try
+    AdvMemo2.ActiveLine := AdvMemo2.Lines.IndexOf(AdvMemo1.Lines.Strings[AdvMemo1.ActiveLine]);
+    UpDateMemo3();
+    AdvMemo1.ActiveLine := AdvMemo1.Lines.IndexOf(AdvMemo2.Lines.Strings[AdvMemo2.ActiveLine]);
+  except on E: Exception do
+    AdvMemo2.ActiveLine := AdvMemo2.Lines.IndexOf(AdvMemo1.Lines.Strings[AdvMemo1.ActiveLine]);
+  end;
+end;
+
+procedure TFormMain.AdvMemo2ActiveLineChange(CurYPos: Integer);
+var
+s: string;
+findoptions: TFindOptions;
+o: integer;
+I: integer;
+b: string;
+bList: TIntList;
+inn: integer;
+begin
+  //blist := Tintlist.Create;
+  UpDateMemo3();
+  AdvMemo1.ActiveLine := AdvMemo1.Lines.IndexOf(AdvMemo2.Lines.Strings[AdvMemo2.ActiveLine]);
+  //s := AdvMemo2.Lines.Strings[AdvMemo2.ActiveLine];
+//  for I := 0 to Advmemo2.FindTextCount(s, Finddialog1.Options) do
+//  begin
+//     AdvMemo1.ActiveLine := AdvMemo1.Lines.IndexOf(AdvMemo2.Lines.Strings[AdvMemo2.ActiveLine]);
+//     if I > 0 then
+//     begin
+//
+//     end;
+//  end;
+
+  //label4.Caption := Advmemo2.FindTextCount(s, Finddialog1.Options).ToString();
+//  for s in Advmemo1.Lines.Text do
+//  begin
+//     if s.Contains(AdvMemo2.Lines.Strings[AdvMemo2.ActiveLine]) then
+//     begin
+//         inn := AdvMemo1.Lines.IndexOf(b);
+//         blist.Add(inn);
+//         Advmemo4.Lines.Add(s);
+//     end;
+//  end;
+//    for I := AdvMemo2.Lines.Count - 1 downto 0 do
+//      begin
+//        if (Advmemo2.Lines[I].Contains(s)) then
+//        begin
+//          o := advmemo1.Lines.IndexOf(I);
+//          AdvMemo4.Lines.Add(o.ToString());
+//        end;
+//      end;
+
+end;
+
+procedure TFormMain.AdvMemo2KeyDown(Sender: TObject; var Key: Word;
+  Shift: TShiftState);
+begin
+  if Key = VK_DOWN then
+  begin
+    Shape2.Brush.Color := clScrollBar;
+  end;
+  if Key = VK_UP then
+  begin
+    Shape3.Brush.Color := clScrollBar;
+  end;
+
+end;
+
+
+procedure TFormMain.AdvMemo2KeyUp(Sender: TObject; var Key: Word;
+  Shift: TShiftState);
+begin
+  if Key = VK_DOWN then
+  begin
+    Shape2.Brush.Color := cl3DLight;
+  end;
+  if Key = VK_UP then
+  begin
+    Shape3.Brush.Color := cl3DLight;
+  end;
+end;
+
+procedure TFormMain.AdvMemo4DblClick(Sender: TObject);
+begin
+  if wanttosave = true then
+  begin
+    Button4Click(nil);
+  end;
+  Advmemo1.Lines.Clear;
+  Lselectedfile := advmemo4.Lines.Strings[advmemo4.ActiveLine];
+  advmemo1.Lines.LoadFromFile(Lselectedfile);
+  Memo2.Lines.Clear;
+  Memo2.Lines.Add('�bner fil ' + LselectedFile);
+  createBackup();
+  UpdateMemo2();
+  wanttosave := false;
+
+
+
+end;
+
+procedure TFormMain.Button1Click(Sender: TObject);
+var
+  dlg: TOpenDialog;
+  path: string;
+begin
+  if wanttosave = true then
+  begin
+    Button4Click(nil);
+  end
+  else
+  begin
+    LselectedFile := '';
+    dlg := TOpenDialog.Create(nil);
+    try
+      dlg.InitialDir := '';
+      dlg.Filter := 'All files (*.pas*)|*.pas*';
+      if dlg.Execute(Handle) then
+        LselectedFile := dlg.FileName;
+        path := extractFilePath(LselectedFile);
+    finally
+      dlg.Free;
+    end;
+    if LselectedFile <> '' then
+    begin
+      createBackup();
+      AdvMemo1.Lines.Clear;
+      AdvMemo1.Lines.LoadFromFile(LselectedFile);
+      //Backup := Advmemo1.Lines.Text;
+      Memo2.Lines.Clear;
+      Memo2.Lines.Add('�bner fil ' + LselectedFile);
+      wanttosave := false;
+    end
+    else
+    begin
+      //ShowMessage('Du har ikke valgt en fil');
+    end;
+    UpdateMemo2();
+    Button4.Enabled := true;
+    Button3.Enabled := true;
+    Button6.Enabled := true;
+    EditLine.Enabled := true;
+  end;
+
+
+
+//  dlg := TOpenDialog.Create(nil);
+//  if advmemo4.ActiveLine = 0 then
+//
+//    try
+//    LselectedFile := '';
+//
+//    dlg.InitialDir := '';
+//    dlg.Filter := 'All files (*.pas*)|*.pas*';
+//    if dlg.Execute(Handle) then
+//      LselectedFile := dlg.FileName;
+//      path := extractFilePath(LselectedFile);
+//  finally
+//    dlg.Free;
+//  end;
+//  if LselectedFile <> '' then
+//  begin
+//    //createBackup();
+//    AdvMemo1.Lines.Clear;
+//    AdvMemo1.Lines.LoadFromFile(LselectedFile);
+//    Memo2.Lines.Clear;
+//    Memo2.Lines.Add('�bner fil ' + LselectedFile);
+//  end
+//  else
+//  begin
+//    ShowMessage('Du har ikke valgt en fil');
+//  end;
+
+
+  //  if advmemo4.ActiveLine <> 0 then
+  //  begin
+  //    Advmemo1.Lines.Clear;
+  //    advmemo1.Lines.LoadFromFile(advmemo4.Lines.Strings[advmemo4.ActiveLine]);
+  //  end;
+
+end;
+
+ procedure TFormMain.folderButtonClick(Sender: TObject);
+var
+  path: string;
+  line: string;
+  paths: string;
+  SearchRec : TSearchRec;
+begin
+  if wanttosave = true then
+  begin
+    Button4Click(nil);
+  end;
+
+  path := '';
+  directoryList := TStringList.Create;
+  if FolderDialog1.Execute() then
+    path := FolderDialog1.Directory;
+    paths := path;
+  if path <> '' then
+  begin
+    //ShowMessage('Du har valgt ' + path);
+    createBackup();
+    AdvMemo4.Lines.Clear;
+    for path in TDirectory.GetFiles(path) do
+    begin
+      if path.Contains('pas') then
+      begin
+        advmemo4.Lines.Add(path);
+        directorylist.Add(path);
+//      end else if (not path.Contains('.'))  then
+//      begin
+//         RecursiveFolderTraversing(path);
+       end;
+    end;
+    
+    for path in TDirectory.GetDirectories(paths) do
+    begin
+      if (not path.Contains('_')) and (not path.Contains('.')) then
+        RecursiveFolderTraversing(path);
+    end;
+  end
+  else
+  begin
+//    ShowMessage('Du har ikke valgt en fil');
+  end;
+   wanttosave := false;
+   Button4.Enabled := true;
+   Button3.Enabled := true;
+   Button6.Enabled := true;
+   EditLine.Enabled := true;
+end;
+
+
+procedure TFormMain.RecursiveFolderTraversing(folderPath : string);
+var
+  path : string;
+  SearchRec : TSearchRec;
+
+begin
+   for path in TDirectory.GetFiles(folderPath) do
+    begin
+      if path.Contains('pas') then
+      begin
+        advmemo4.Lines.Add(path);
+        directorylist.Add(path);
+//      end else if (not path.Contains('.'))  then
+//      begin
+//         RecursiveFolderTraversing(path);
+       end;
+    end;
+
+    for path in TDirectory.GetDirectories(folderPath) do
+    begin
+      if (not path.Contains('_')) and (not path.Contains('.')) then
+        RecursiveFolderTraversing(path);
+    end;
+end;
+
+//http://stackoverflow.com/questions/37365649/read-specific-line-from-textfile
+procedure TFormMain.UpdateMemo2;
+var
+c: string;
+FStr: TStringList;
+I: Integer;
+
+begin
+  AdvMemo2.Lines.Clear;
+  FStr := TStringList.Create;
+  try
+    if LselectedFile = '' then
+    begin
+      //ShowMessage('Du har ikke valgt en fil');
+    end
+    else
+    begin
+      FStr.LoadFromFile(LselectedFile);
+      for c in FStr do
+      begin
+        if c.Contains('''') then
+        begin
+          AdvMemo2.Lines.Add(c);
+        end;
+      end;
+
+      for I := AdvMemo2.Lines.Count - 1 downto 0 do
+      begin
+        if (Advmemo2.Lines[I].Contains('//')) or {(Advmemo2.Lines[I].Contains('<> ''')) or (Advmemo2.Lines[I].Contains(''';')) or (Advmemo2.Lines[I].Contains(''' then'))} (Advmemo2.Lines[I].Contains(''''''))  then
+        begin
+          Advmemo2.Lines.Delete(I);
+        end;
+      end;
+      UpDateMemo3();
+    end;
+
+  finally
+    AdvMemo2.ActiveLine := 0;
+    FStr.Free;
+  end;
+
+end;
+
+
+procedure TFormMain.Button3Click(Sender: TObject);
+var
+  OutPutList: TStringList;
+  tempLine : string;
+  I : integer;
+  tempChar : string;
+  foundFirstQuote : boolean;
+  foundLastQuote : boolean;
+  firstQuotePos : integer;
+  lastQuotePos : integer;
+  linePos : integer;
+  skipNext : boolean;
+  counter : integer;
+  multiplier : integer;
+begin
+  foundFirstQuote := false;
+  foundLastQuote := false;
+  firstQuotePos := 0;
+  lastQuotePos := 0;
+  counter := 0;
+  multiplier := 0;
+//  FilehasBeenEdited(HasBeenEdited);
+//  HasbeenEdited := hasbeenedited +1;
+
+  OutPutList := TStringList.Create();
+  try
+   tempLine := AdvMemo2.Lines.Strings[AdvMemo2.ActiveLine];
+  if tempLine.Contains('tx(') then
+  begin
+    ShowMessage('Linjen er allerede omringet med tx()');
+   //DO NOTHING
+  end else begin
+  rollback();
+  //LOOP BEGINNING
+    for I := 0 to ((tempLine.Length + multiplier) - 1) do
+    begin
+     tempChar := tempLine.Substring(I,1);
+
+     if counter = 0 then
+     begin
+       if tempChar.Contains('''') then
+       begin
+        //IF first quote in string is not found
+         if foundFirstQuote = false then
+         begin
+         //CHECK IF STRING ALREADY HAS 'tx()' surrounding it
+          {if (tempLine.Substring(I - 1, 1) = '(') and (tempLine.Substring(I - 2, 1) = 'x') and (tempLine.Substring(I - 3, 1) = 't') then
+          begin
+            foundFirstQuote := false;
+            counter := counter + 1;
+          end else begin           }
+            foundFirstQuote := true;
+            firstQuotePos := I;
+         // end;
+         //If it is found
+         end else begin
+            if tempLine.Substring(I + 1, 1).Contains('''') then
+              //DO nada
+            begin
+              foundLastQuote := false;
+            end else begin
+              foundLastQuote := true;
+              lastQuotePos := I;
+
+              tempLine.Insert(firstQuotePos, 'tx(');
+              tempLine.Insert(lastQuotePos + 1 +3, ')');
+
+              linePos := AdvMemo1.Lines.IndexOf(AdvMemo2.Lines.Strings[AdvMemo2.ActiveLine]);
+              AdvMemo2.Lines.Strings[AdvMemo2.ActiveLine] := tempLine;
+              AdvMemo1.Lines.Strings[linePos] := tempLine;
+
+              //ShowMessage(tempLine.Length.ToString + ' I: ' + I.ToString());
+              foundLastQuote := false;
+              foundFirstQuote := false;
+              counter := 4;
+              multiplier := multiplier + 4;
+            end;
+         end;
+       end;
+     end else begin
+      counter := counter - 1;
+     end;
+     FCounter := I;
+
+    end;
+
+    //LOOP END
+     for I := FCounter to ((tempLine.Length + multiplier) - 1) do
+     begin
+     tempChar := tempLine.Substring(I,1);
+
+     if counter = 0 then
+     begin
+       if tempChar.Contains('''') then
+       begin
+         if foundFirstQuote = false then
+         begin
+            foundFirstQuote := true;
+            firstQuotePos := I;
+
+         end else begin
+
+            if tempLine.Substring(I + 1, 1).Contains('''') then
+            begin
+              foundLastQuote := false;
+            end else begin
+              foundLastQuote := true;
+              lastQuotePos := I;
+
+              tempLine.Insert(firstQuotePos, 'tx(');
+              tempLine.Insert(lastQuotePos + 1 +3, ')');
+
+              linePos := AdvMemo1.Lines.IndexOf(AdvMemo2.Lines.Strings[AdvMemo2.ActiveLine]);
+
+              AdvMemo2.Lines.Strings[AdvMemo2.ActiveLine] := tempLine;
+              AdvMemo1.Lines.Strings[linePos] := tempLine;
+              AdvMemo1.ActiveLine := linePos;
+
+              //ShowMessage(tempLine.Length.ToString + ' I: ' + I.ToString());
+              foundLastQuote := false;
+              foundFirstQuote := false;
+              counter := 4;
+              multiplier := multiplier + 4;
+            end;
+         end;
+       end;
+     end else begin
+      counter := counter - 1;
+     end;
+     FCounter := I;
+
+    end;
+  end;
+  AdvMemo1.ActiveLine := AdvMemo1.Lines.IndexOf(AdvMemo2.Lines.Strings[AdvMemo2.ActiveLine]);
+  UpdateMemo3();
+
+  except on E: Exception do
+  end;
+  wanttosave := true;
+
+end;
+
+
+procedure TFormMain.Button4Click(Sender: TObject);
+var
+  str: string;
+  td: TTaskDialog;
+  tb: TTaskDialogBaseButtonItem;
+  path : string;
+  counter : integer;
+  I : integer;
+begin
+    begin
+    td := TTaskDialog.Create(nil);
+    try
+      td.Text := 'Filen er �ndret. Vil du gemme den?';
+      td.MainIcon := tdiWarning;
+      td.CommonButtons := [];
+
+      tb := td.Buttons.Add;
+      tb.Caption := 'Gem';
+      tb.ModalResult := 103;
+
+      tb := td.Buttons.Add;
+      tb.Caption := 'Gem som';
+      tb.ModalResult := 100;
+
+      tb := td.Buttons.Add;
+      tb.Caption := 'Nej';
+      tb.ModalResult := 101;
+
+      td.Execute;
+
+      if td.ModalResult = 100 then
+      begin
+        LselectedFile := '';
+        SaveDialog1 := TSaveDialog.Create(nil);
+        try
+          SaveDialog1.InitialDir := '';
+          SaveDialog1.Filter := 'All files (*.pas*)|*.pas*';
+          if SaveDialog1.Execute(Handle) then
+            LselectedFile := SaveDialog1.FileName;
+            path :=  SaveDialog1.FileName;
+        finally
+            SaveDialog1.Free;
+        end;
+
+        Memo2.Lines.Clear;
+        Memo2.Lines.Add('Gemte fil ' + LselectedFile);
+        Backup.SaveToFile(Lselectedfile + 'TranslateBackup');
+        Advmemo1.Lines.SaveToFile(LselectedFile);
+      end
+      else if td.ModalResult = 101 then
+      begin
+        wanttosave := false;
+        //Do nothing
+      end
+      else if td.ModalResult = 103 then
+      begin
+        str := LselectedFile;
+        //SetLength(str, Length(str) - 4);
+        ShowMessage('Gemte fil ' + str);
+        Memo2.Lines.Clear;
+        Memo2.Lines.Add('Gemte fil ' + LselectedFile);
+        Backup.SaveToFile(Lselectedfile + 'TranslateBackup');
+        Advmemo1.Lines.SaveToFile(str);
+        path :=  str;
+      end;
+
+
+    finally
+      ForceDirectories(TPath.GetDocumentsPath + Tpath.DirectorySeparatorChar + 'TextFinder');
+      inifile := TIniFile.Create(TPath.GetDocumentsPath + Tpath.DirectorySeparatorChar + 'TextFinder' + Tpath.DirectorySeparatorChar + 'FilesSaved.ini');
+      with  iniFile do
+      begin
+        for I := 0 to 10000 do
+        begin
+          if ReadString('Edited File paths', 'editedFile' + I.ToString(), '') <> '' then
+          begin
+            counter := counter + 1;
+          end else begin
+           break;
+          end;
+        end;
+
+        WriteString('Edited File paths', 'editedFile' + counter.ToString(), path);
+      end;
+
+      td.Free;
+    end;
+  end;
+  wanttosave := false;
+
+end;
+
+
+//--------------------------------SINGLE STRING--------------------------------------
+{procedure TForm57.Button5Click(Sender: TObject);
+var
+  OutPutList: TStringList;
+  tempLine : string;
+  I : integer;
+  tempChar : string;
+  foundFirstQuote : boolean;
+  foundLastQuote : boolean;
+  firstQuotePos : integer;
+  lastQuotePos : integer;
+  linePos : integer;
+  skipNext : boolean;
+  counter : integer;
+  multiplier : integer;
+  FStr: TStringList;
+begin
+  foundFirstQuote := false;
+  foundLastQuote := false;
+  firstQuotePos := 0;
+  lastQuotePos := 0;
+  counter := 0;
+  multiplier := 0;
+  AdvMemo3.Lines.Clear;
+  tempLine := AdvMemo2.Lines.Strings[AdvMemo2.ActiveLine];
+  multi := 0;
+  lastStartpos := 0;
+
+  startpos := TintList.Create();
+  endpos := TintList.Create();
+  finishedStrings := TIntList.Create();
+
+  try
+  //LOOP BEGINNING
+     for I := 0 to ((tempLine.Length) - 1) do
+    begin
+     tempChar := tempLine.Substring(I,1);
+
+     if counter = 0 then
+     begin
+       if tempChar.Contains('''') then
+       begin
+        //IF first quote in string is not found
+         if foundFirstQuote = false then
+         begin
+            if (tempLine.Substring(I - 1, 1) = '(') and (tempLine.Substring(I - 2, 1) = 'x') and (tempLine.Substring(I - 3, 1) = 't') then
+            begin
+              foundFirstQuote := false;
+              counter := counter + 1;
+            end else begin
+              foundFirstQuote := true;
+              startpos.Add(I);
+            end;
+         //If it is found
+         end else begin
+            if tempLine.Substring(I + 1, 1).Contains('''') then
+            begin
+              foundLastQuote := false;
+            end else begin
+              foundLastQuote := true;
+              endpos.Add(I);
+
+              foundLastQuote := false;
+              foundFirstQuote := false;
+              counter := 4;
+            end;
+         end;
+       end;
+     end else begin
+      counter := counter - 1;
+     end;
+    end;
+
+    for I := 0 to startpos.Count - 1 do
+    begin
+      AdvMemo3.Lines.Add(tempLine.Substring(startpos[I], (endpos[I] + 1) - startpos[I]));
+    end;
+
+  finally
+    SetLength(stringSet, startpos.Count);
+    for I := 0 to Length(stringSet)-1 do
+    begin
+      stringSet[I] := false;
+    end;
+
+    AdvMemo3.ActiveLine := 0;
+  end;
+
+end;}
+//procedure TFormMain.FilehasBeenEdited(AHasBeenEdited: integer);
+//begin
+//  if AHasBeenEdited = 0 then
+//  begin
+//    Advmemo1.Lines.SaveToFile(LselectedFile + 'TranslateBackup');
+//  end
+//  else
+//  begin
+//
+//  end;
+//
+//end;
+procedure TFormMain.Button6Click(Sender: TObject);
+var
+  tempDistance : integer;
+  tempLine : string;
+  I : integer;
+  linePos : integer;
+  stringsSetBeforeMe : integer;
+
+begin
+  stringsSetBeforeMe := 0;
+//  FilehasBeenEdited(HasBeenEdited);
+//  HasbeenEdited := hasbeenedited +1;
+  rollback();
+  try
+    if not AdvMemo3.Lines.Strings[AdvMemo3.ActiveLine].Contains('tx(') then
+   begin
+     AdvMemo3.Lines.Strings[AdvMemo3.ActiveLine] := ('tx(' + AdvMemo3.Lines.Strings[AdvMemo3.ActiveLine].Trim + ')');
+     tempLine := AdvMemo2.Lines.Strings[AdvMemo2.ActiveLine];
+
+     if (AdvMemo3.ActiveLine = 0) then
+     begin
+        tempLine.Insert(startpos[AdvMemo3.ActiveLine], 'tx(');
+        tempLine.Insert(endpos[AdvMemo3.ActiveLine] + (1 + 3), ')');
+        stringSet[AdvMemo3.ActiveLine] := true;
+     end else begin
+        for I := 0 to Length(stringSet)-1 do
+        begin
+           if (I < AdvMemo3.ActiveLine) and (stringSet[I] = true) then
+           begin
+             stringsSetBeforeMe := stringsSetBeforeMe + 1;
+           end;
+        end;
+        stringSet[AdvMemo3.ActiveLine] := true;
+        tempLine.Insert(startpos[AdvMemo3.ActiveLine] + (4 * (stringsSetBeforeMe)), 'tx(');
+        tempLine.Insert(endpos[AdvMemo3.ActiveLine] + (1 + 3) + (4 * (stringsSetBeforeMe)), ')');
+     end;
+
+
+     finishedStrings.Add(startpos[AdvMemo3.ActiveLine]);
+
+     lastStartpos := startpos[AdvMemo3.ActiveLine];
+     linePos := AdvMemo1.Lines.IndexOf(AdvMemo2.Lines.Strings[AdvMemo2.ActiveLine]);
+
+     AdvMemo2.Lines.Strings[AdvMemo2.ActiveLine] := tempLine;
+     AdvMemo1.Lines.Strings[linePos] := tempLine;
+   end else begin
+       ShowMessage('Strengen er allerede omringet med tx()');
+   end;
+   AdvMemo1.ActiveLine := AdvMemo1.Lines.IndexOf(AdvMemo2.Lines.Strings[AdvMemo2.ActiveLine]);
+   UpdateMemo3();
+  except on E: Exception do
+  end;
+  wanttosave := true;
+   
+
+   
+
+end;
+
+procedure TFormMain.CheckBox1Click(Sender: TObject);
+var
+  path: string;
+  path2: string;
+  lala: integer;
+  I: integer;
+  intindex: integer;
+  O: Integer;
+  iniList: TStringList;
+begin
+  iniFile := TINIFILE.Create(TPath.GetDocumentsPath + Tpath.DirectorySeparatorChar + 'TextFinder' + Tpath.DirectorySeparatorChar + 'FilesSaved.ini');
+  //iniList := TStringList.Create;
+  //iniList.LoadFromFile(TPath.GetDocumentsPath + Tpath.DirectorySeparatorChar + 'TextFinder' + Tpath.DirectorySeparatorChar + 'FilesSaved.ini');
+
+  if AdvMemo4.Lines[AdvMemo4.ActiveLine] <>'' then
+  begin
+    if Checkbox1.Checked = true then
+      begin
+        for I := AdvMemo4.Lines.Count - 1 downto 0 do
+        begin
+          if (Advmemo4.Lines[I].Contains('TranslateBackup')) or (Advmemo4.Lines[I].Contains('_translatebackup')) then
+          begin
+    //        for O := Advmemo4.Lines.Count - 1 downto 0 do
+    //          begin
+    //             if (Advmemo4.Lines[O] + 'TranslateBackup') = (Advmemo4.Lines[I])  then
+    //             begin
+    //               AdvMemo4.Lines.Delete(O);
+    //             end;
+    //          end;
+
+            Advmemo4.Lines.Delete(I);
+          end;
+        end;
+
+        for I := AdvMemo4.Lines.Count - 1 downto 0 do
+        begin
+          for O := 0 to 10000 do
+          begin
+            if inifile.ReadString('Edited File paths', 'editedFile' + O.ToString(), '') = Advmemo4.Lines[I] then
+            begin
+              try
+               Advmemo4.Lines.Delete(I);
+              except on E: Exception do
+              end;
+
+            end else if inifile.ReadString('Edited File paths', 'editedFile' + O.ToString(), '') = '' then
+            begin
+              break;
+            end;
+          end;
+        end;
+
+      end else
+      begin
+        Advmemo4.Lines.Clear;
+        advmemo4.Lines.AddStrings(directorylist);
+      end;
+  end
+  else
+  begin
+    Checkbox1.Checked := false;
+  end;
+
+end;
+
+//    intIndex := 0;
+//    while intIndex < Advmemo4.Lines.Count do // iterating 'till the last line
+//    begin
+//    if (AnsiContainsStr(Advmemo4.Lines[intIndex], 'TranslateBackup')) or (AnsiContainsStr(Advmemo4.Lines[intIndex], '_translateBackup')) then // if the current line contains the text
+//    begin
+//      Advmemo4.Lines.Delete(intIndex)
+//    end
+//    else
+//      Inc(intIndex); // increase the index
+//    end;
+    {begin
+      for path in directoryList do
+        begin
+          if path.Contains('translatebackup') then
+            begin
+               lala := Directorylist.IndexOf(path);
+              //DirectoryList.IndexOf(path);
+              //Advmemo4.Lines.Delete();
+              //advmemo4.Lines.
+              //directorylist.Delete(directoryList.IndexOf(path));
+              for path2 in directoryList do
+                begin
+                  Advmemo4.Lines.Add(path2);
+                end;
+                 Directorylist.Delete(lala);
+            end;
+
+        end;
+        {for I := 0 to directorylist.Count do
+          if directorylist.Text.Contains('translate') then
+            begin
+              directorylist.Delete(I);
+            end;}
+
+      {for path in directorylist do
+        begin
+          if path.Contains('translate') = true then
+            begin
+              directorylist.Delete(directorylist.IndexOf(path));
+            end;
+        end;
+
+         advmemo4.Lines.AddStrings(directorylist);
+
+
+
+
+    end;}
+     // starting at the first line
+
+    //advmemo4.Lines.AddStrings(directorylist);
+    //directorylist.Clear;
+
+
+{procedure TForm57.Button7Click(Sender: TObject);
+var Form : TFormSplitter;
+begin
+  Form:=TFormSplitter.Create(self);
+
+  Form.ShowModal;
+
+  Form.Free;
+end;
+
+//START
+procedure TForm57.FormCreate(Sender: TObject);
+var Form : TFormSplitter;
+begin
+ Form:=TFormSplitter.Create(self);
+
+  Form.ShowModal;
+
+  Form.Free;
+end;}
+
+procedure TFormMain.UpDateMemo3;
+  var
+  OutPutList: TStringList;
+  tempLine : string;
+  I : integer;
+  tempChar : string;
+  foundFirstQuote : boolean;
+  foundLastQuote : boolean;
+  firstQuotePos : integer;
+  lastQuotePos : integer;
+  linePos : integer;
+  skipNext : boolean;
+  counter : integer;
+  multiplier : integer;
+  FStr: TStringList;
+  outofbounds: integer;
+begin
+  foundFirstQuote := false;
+  foundLastQuote := false;
+  firstQuotePos := 0;
+  lastQuotePos := 0;
+  counter := 0;
+  multiplier := 0;
+  AdvMemo3.Lines.Clear;
+  tempLine := AdvMemo2.Lines.Strings[AdvMemo2.ActiveLine];
+  multi := 0;
+  lastStartpos := 0;
+
+  startpos := TintList.Create();
+  endpos := TintList.Create();
+  finishedStrings := TIntList.Create();
+
+  try
+    try
+  //LOOP BEGINNING
+     for I := 0 to ((tempLine.Length) - 1) do
+    begin
+     tempChar := tempLine.Substring(I,1);
+
+     if counter = 0 then
+     begin
+       if tempChar.Contains('''') then
+       begin
+        //IF first quote in string is not found
+         if foundFirstQuote = false then
+         begin
+            if (tempLine.Substring(I - 1, 1) = '(') and (tempLine.Substring(I - 2, 1) = 'x') and (tempLine.Substring(I - 3, 1) = 't') or (tempLine.Substring(I + 1, 1) = ')')  then
+            begin
+              foundFirstQuote := false;
+              counter := counter + 1;
+            end else begin
+              foundFirstQuote := true;
+              startpos.Add(I);
+            end;
+         //If it is found
+         end else begin
+            if (tempLine.Substring(I - 1, 1) = '(') and (tempLine.Substring(I - 2, 1) = 'x') and (tempLine.Substring(I - 3, 1) = 't')  then
+            begin
+              foundLastQuote := false;
+            end else begin
+              foundLastQuote := true;
+              endpos.Add(I);
+
+              foundLastQuote := false;
+              foundFirstQuote := false;
+              counter := 0;
+            end;
+         end;
+       end;
+     end else begin
+      counter := counter - 1;
+     end;
+    end;
+
+    for I := 0 to (startpos.Count - 1) do
+    begin
+      AdvMemo3.Lines.Add(tempLine.Substring(startpos[I], (endpos[I] + 1) - startpos[I]));
+    end;
+
+  finally
+
+    SetLength(stringSet, startpos.Count);
+    for I := 0 to Length(stringSet) - 1 do
+    begin
+      stringSet[I] := false;
+    end;
+
+    AdvMemo3.ActiveLine := 0;
+  end;
+  except on E: Exception do
+  end;
+end;
+
+//----------------------SCROLL THROUGH STRINGS------------------------
+//SINGLE STRING
+procedure TFormMain.downBtn2Click(Sender: TObject);
+begin
+    AdvMemo3.ActiveLine := AdvMemo3.ActiveLine+1;
+end;
+
+procedure TFormMain.upBtn2Click(Sender: TObject);
+begin
+   if (AdvMemo3.ActiveLine <> 0) then
+  begin
+    AdvMemo3.ActiveLine := AdvMemo3.ActiveLine-1;
+  end;
+end;
+
+//ALL STRINGS
+procedure TFormMain.downBtnClick(Sender: TObject);
+begin
+    if Advmemo2.ActiveLine < Advmemo2.Lines.Count -1 then
+    begin
+      AdvMemo2.ActiveLine := AdvMemo2.ActiveLine+1;
+      AdvMemo3.ActiveLine := AdvMemo2.ActiveLine;
+      UpDateMemo3();
+      AdvMemo1.ActiveLine := AdvMemo1.Lines.IndexOf(AdvMemo2.Lines.Strings[AdvMemo2.ActiveLine]);
+    end;
+
+
+end;
+
+procedure TFormMain.EditLineClick(Sender: TObject);
+var
+  Form1 : TFormEdit;
+begin
+
+  if AdvMemo2.Lines[AdvMemo2.ActiveLine] <>'' then
+  begin
+    rollback();
+//    FilehasBeenEdited(HasBeenEdited);
+//    HasbeenEdited := hasbeenedited +1;
+    Form1 :=TFormEdit.Create(Self);
+    Form1.AdvMemo1.Clear;
+    Form1.AdvMemo1.Lines.Add(AdvMemo2.Lines.Strings[AdvMemo2.ActiveLine]);
+//  Form.AdvMemo1.Lines
+
+    if Form1.ShowModal = mrOK then begin
+      AdvMemo2.Lines.Strings[AdvMemo2.ActiveLine] := Form1.AdvMemo1.Lines.Text;
+      AdvMemo1.Lines.Strings[AdvMemo1.ActiveLine] := Form1.AdvMemo1.Lines.Text;
+      AdvMemo1.ActiveLine := AdvMemo1.Lines.IndexOf(AdvMemo2.Lines.Strings[AdvMemo2.ActiveLine]);
+      UpdateMemo3();
+      wanttosave := true;
+
+    end;
+    Form1.Free;
+  {Form1 := TForm1.Create(nil);
+  Form1.Show;
+//  Form.AdvMemo1.Lines
+
+  if Form1.Show = mrOK then begin
+    // Skifter linien ud
+    Form1.Free;
+  end;}
+  end
+  else
+  begin
+
+  end;
+
+
+
+end;
+
+procedure TFormMain.FormClose(Sender: TObject; var Action: TCloseAction);
+begin
+  if (wanttosave = true) then
+  begin
+    button4click(nil)
+  end;
+end;
+
+procedure TFormMain.FormCreate(Sender: TObject);
+begin
+  Memo2.Text := '';
+end;
+
+procedure TFormMain.FormKeyDown(Sender: TObject; var Key: Word;
+  Shift: TShiftState);
+begin
+  if (Key = VK_RETURN) and (AdvMemo2.Lines.Count <> 0)  then
+  begin
+    Button3Click(nil);
+  end;
+  if (Key = VK_SPACE) and (AdvMemo3.Lines.Count <> 0) then
+  begin
+    try
+      Button6Click(nil);
+    except on E: Exception do
+    end;
+  end;
+  if (Key = VK_F3) then
+  begin
+    try
+      AdvMemo2.Lines.Strings[rollbackline] := rollbacktext;
+      AdvMemo1.Lines.Strings[rollbacklinememo1] := rollbacktext;
+      AdvMemo1.ActiveLine := AdvMemo1.Lines.IndexOf(AdvMemo2.Lines.Strings[AdvMemo2.ActiveLine]);
+      Updatememo3();
+    except on E: Exception do
+    end;
+  end;
+  if (Key = VK_F9) then
+  begin
+     GetLinesCount();
+  end;
+end;
+
+procedure TFormMain.GetLinesCount();
+var
+path: string;
+i : Integer;
+oSL : TStringlist;
+counter: integer;
+begin
+counter := 0;
+
+oSL := TStringlist.Create;
+for I := Advmemo4.Lines.Count -1 downto 0 do
+begin
+  path := Advmemo4.Lines[I];
+  oSL.LoadFromFile(path);
+  counter := counter + oSL.Count;
+end;
+label4.Caption := 'Antal linjer kode skrevet:' + counter.ToString();
+
+oSL.Free;
+end;
+
+procedure TFormMain.upBtnClick(Sender: TObject);
+begin
+  if (AdvMemo2.ActiveLine <> 0) then
+  begin
+    AdvMemo2.ActiveLine := AdvMemo2.ActiveLine-1;
+    UpDateMemo3();
+    AdvMemo1.ActiveLine := AdvMemo1.Lines.IndexOf(AdvMemo2.Lines.Strings[AdvMemo2.ActiveLine]);
+  end;
+end;
+
+procedure TFormMain.createBackup();
+begin
+  Backup := TStringList.Create;
+  Backup.AddStrings(Advmemo1.Lines);
+end;
+
+end.  //IMPORTANT
