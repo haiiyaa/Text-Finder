@@ -1,0 +1,30 @@
+unit frmSplitter;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ExtCtrls, AdvPanel;
+
+type
+  TForm1 = class(TForm)
+    AdvPanel1: TAdvPanel;
+    AdvPanel2: TAdvPanel;
+    AdvPanel3: TAdvPanel;
+    AdvPanel4: TAdvPanel;
+    Splitter1: TSplitter;
+    Splitter2: TSplitter;
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+  end;
+
+var
+  Form1: TForm1;
+
+implementation
+
+{$R *.dfm}
+
+end.
